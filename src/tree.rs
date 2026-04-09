@@ -7,7 +7,7 @@ use crate::{
         ContainsPruner, DuringPruner, FinishesPruner, MeetsPruner, MetByPruner, OverlapsPruner,
         OwnedIter, PrecededByPruner, PrecedesPruner, PruningIter, RefIter, StartsPruner,
     },
-    node::{remove_recurse, Node, RemoveResult},
+    node::{Node, RemoveResult, remove_recurse},
 };
 
 /// An [`IntervalTree`] stores `(interval, value)` tuple mappings, enabling
@@ -161,10 +161,10 @@ where
     ///                                       Y
     /// ```
     ///
-    pub fn iter_overlaps<'a>(
+    pub fn iter_overlaps<'a: 'b, 'b>(
         &'a self,
-        range: &'a Range<R>,
-    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> {
+        range: &'b Range<R>,
+    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> + 'b {
         self.0
             .iter()
             .flat_map(|v| PruningIter::new(v, range, OverlapsPruner))
@@ -185,10 +185,10 @@ where
     ///                                            Y
     /// ```
     ///
-    pub fn iter_precedes<'a>(
+    pub fn iter_precedes<'a: 'b, 'b>(
         &'a self,
-        range: &'a Range<R>,
-    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> {
+        range: &'b Range<R>,
+    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> + 'b {
         self.0
             .iter()
             .flat_map(|v| PruningIter::new(v, range, PrecedesPruner))
@@ -209,10 +209,10 @@ where
     ///                        Y
     /// ```
     ///
-    pub fn iter_preceded_by<'a>(
+    pub fn iter_preceded_by<'a: 'b, 'b>(
         &'a self,
-        range: &'a Range<R>,
-    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> {
+        range: &'b Range<R>,
+    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> + 'b {
         self.0
             .iter()
             .flat_map(|v| PruningIter::new(v, range, PrecededByPruner))
@@ -233,10 +233,10 @@ where
     ///                                            Y
     /// ```
     ///
-    pub fn iter_meets<'a>(
+    pub fn iter_meets<'a: 'b, 'b>(
         &'a self,
-        range: &'a Range<R>,
-    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> {
+        range: &'b Range<R>,
+    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> + 'b {
         self.0
             .iter()
             .flat_map(|v| PruningIter::new(v, range, MeetsPruner))
@@ -257,10 +257,10 @@ where
     ///                           Y
     /// ```
     ///
-    pub fn iter_met_by<'a>(
+    pub fn iter_met_by<'a: 'b, 'b>(
         &'a self,
-        range: &'a Range<R>,
-    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> {
+        range: &'b Range<R>,
+    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> + 'b {
         self.0
             .iter()
             .flat_map(|v| PruningIter::new(v, range, MetByPruner))
@@ -281,10 +281,10 @@ where
     ///                                Y
     /// ```
     ///
-    pub fn iter_starts<'a>(
+    pub fn iter_starts<'a: 'b, 'b>(
         &'a self,
-        range: &'a Range<R>,
-    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> {
+        range: &'b Range<R>,
+    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> + 'b {
         self.0
             .iter()
             .flat_map(|v| PruningIter::new(v, range, StartsPruner))
@@ -305,10 +305,10 @@ where
     ///                                   Y
     /// ```
     ///
-    pub fn iter_finishes<'a>(
+    pub fn iter_finishes<'a: 'b, 'b>(
         &'a self,
-        range: &'a Range<R>,
-    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> {
+        range: &'b Range<R>,
+    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> + 'b {
         self.0
             .iter()
             .flat_map(|v| PruningIter::new(v, range, FinishesPruner))
@@ -329,10 +329,10 @@ where
     ///                                Y
     /// ```
     ///
-    pub fn iter_during<'a>(
+    pub fn iter_during<'a: 'b, 'b>(
         &'a self,
-        range: &'a Range<R>,
-    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> {
+        range: &'b Range<R>,
+    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> + 'b {
         self.0
             .iter()
             .flat_map(|v| PruningIter::new(v, range, DuringPruner))
@@ -353,10 +353,10 @@ where
     ///                                Y
     /// ```
     ///
-    pub fn iter_contains<'a>(
+    pub fn iter_contains<'a: 'b, 'b>(
         &'a self,
-        range: &'a Range<R>,
-    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> {
+        range: &'b Range<R>,
+    ) -> impl Iterator<Item = (&'a Range<R>, &'a V)> + 'b {
         self.0
             .iter()
             .flat_map(|v| PruningIter::new(v, range, ContainsPruner))
@@ -391,13 +391,13 @@ impl<R, V> std::iter::IntoIterator for IntervalTree<R, V> {
 mod tests {
     use std::{
         collections::{HashMap, HashSet},
-        sync::{atomic::AtomicUsize, Arc},
+        sync::{Arc, atomic::AtomicUsize},
     };
 
     use proptest::prelude::*;
 
     use super::*;
-    use crate::test_utils::{arbitrary_range, Lfsr, NodeFilterCount};
+    use crate::test_utils::{Lfsr, NodeFilterCount, arbitrary_range};
 
     #[test]
     fn test_insert_contains() {
@@ -828,17 +828,19 @@ mod tests {
 
             // Invariant 1: the left child always contains a value strictly
             // less than this node.
-            assert!(n
-                .left()
-                .map(|v| v.interval() < n.interval())
-                .unwrap_or(true));
+            assert!(
+                n.left()
+                    .map(|v| v.interval() < n.interval())
+                    .unwrap_or(true)
+            );
 
             // Invariant 2: the right child always contains a value striggctly
             // greater than this node.
-            assert!(n
-                .right()
-                .map(|v| v.interval() > n.interval())
-                .unwrap_or(true));
+            assert!(
+                n.right()
+                    .map(|v| v.interval() > n.interval())
+                    .unwrap_or(true)
+            );
 
             // Invariant 3: the height of this node is always +1 of the
             // maximum child height.
