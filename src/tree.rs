@@ -897,4 +897,32 @@ mod tests {
         // Assert that the tree's reported max matches the computed max.
         assert_eq!(tree_max, nodes_max);
     }
+
+    /// The following test module ensures the pruning iterators yield references that can outlive
+    /// the query parameter. This test module must only compile to pass.
+    #[allow(dead_code)]
+    mod pruning_iter_lifetime {
+        use super::*;
+
+        macro_rules! compile_test {
+            ($fn:ident) => {
+                fn $fn<'a, R: Ord + Clone + Debug, V>(
+                    t: &'a IntervalTree<R, V>,
+                    range: Range<R>,
+                ) -> Vec<&'a V> {
+                    t.$fn(&range).map(|(_, x)| x).collect()
+                }
+            };
+        }
+
+        compile_test!(iter_overlaps);
+        compile_test!(iter_precedes);
+        compile_test!(iter_preceded_by);
+        compile_test!(iter_meets);
+        compile_test!(iter_met_by);
+        compile_test!(iter_starts);
+        compile_test!(iter_finishes);
+        compile_test!(iter_during);
+        compile_test!(iter_contains);
+    }
 }
