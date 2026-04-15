@@ -7,7 +7,7 @@ use crate::{
         ContainsPruner, DuringPruner, FinishesPruner, MeetsPruner, MetByPruner, OverlapsPruner,
         OwnedIter, PrecededByPruner, PrecedesPruner, PruningIter, RefIter, StartsPruner,
     },
-    node::{Node, RemoveResult, remove_recurse},
+    node::{remove_recurse, Node, RemoveResult},
 };
 
 /// An [`IntervalTree`] stores `(interval, value)` tuple mappings, enabling
@@ -391,13 +391,13 @@ impl<R, V> std::iter::IntoIterator for IntervalTree<R, V> {
 mod tests {
     use std::{
         collections::{HashMap, HashSet},
-        sync::{Arc, atomic::AtomicUsize},
+        sync::{atomic::AtomicUsize, Arc},
     };
 
     use proptest::prelude::*;
 
     use super::*;
-    use crate::test_utils::{Lfsr, NodeFilterCount, arbitrary_range};
+    use crate::test_utils::{arbitrary_range, Lfsr, NodeFilterCount};
 
     #[test]
     fn test_insert_contains() {
@@ -828,19 +828,17 @@ mod tests {
 
             // Invariant 1: the left child always contains a value strictly
             // less than this node.
-            assert!(
-                n.left()
-                    .map(|v| v.interval() < n.interval())
-                    .unwrap_or(true)
-            );
+            assert!(n
+                .left()
+                .map(|v| v.interval() < n.interval())
+                .unwrap_or(true));
 
             // Invariant 2: the right child always contains a value striggctly
             // greater than this node.
-            assert!(
-                n.right()
-                    .map(|v| v.interval() > n.interval())
-                    .unwrap_or(true)
-            );
+            assert!(n
+                .right()
+                .map(|v| v.interval() > n.interval())
+                .unwrap_or(true));
 
             // Invariant 3: the height of this node is always +1 of the
             // maximum child height.
